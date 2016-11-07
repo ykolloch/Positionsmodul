@@ -11,12 +11,8 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.text.LoginFilter;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
@@ -29,6 +25,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements WifiP2pManager.ChannelListener, DeviceActionListener, WifiP2pManager.PeerListListener, WifiP2pManager.ConnectionInfoListener {
 
     Button btnScan, btnConnect, btnDisc;
+    TextView tfConStatus;
     ListView listViewDevices;
     private boolean isWifiEnabled = false;
     private final IntentFilter intentFilter = new IntentFilter();
@@ -38,6 +35,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     private List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
     private WifiP2pDevice device;
     private ArrayAdapter<WifiP2pDevice> adapter;
+    private WifiP2pDeviceList p2pDeviceList;
 
 
     @Override
@@ -57,7 +55,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
         btnScan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!isWifiEnabled()) {
+                if (!isWifiEnabled()) {
                     //@TODO
                     return;
                 }
@@ -76,24 +74,21 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
         });
 
 
-
         btnConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                WifiP2pConfig wifiP2pConfig = new WifiP2pConfig();
-                wifiP2pConfig.deviceAddress = device.deviceAddress;
-                wifiP2pConfig.wps.setup = WpsInfo.PBC;
-                connect(wifiP2pConfig);
+                connectToAll(p2pDeviceList);
             }
         });
 
         adapter = new ArrayAdapter<WifiP2pDevice>(this, android.R.layout.simple_list_item_1, android.R.id.text1, peers);
+        adapter = new CustomAdapter(this, peers);
         listViewDevices.setAdapter(adapter);
 
-        listViewDevices.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        btnDisc.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                device = peers.get(position);
+            public void onClick(View v) {
+                disconnect();
             }
         });
     }
@@ -112,6 +107,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     }
 
     private void findAllbyID() {
+        tfConStatus = (TextView) findViewById(R.id.tfConStatus);
         btnConnect = (Button) findViewById(R.id.btnConnect);
         btnDisc = (Button) findViewById(R.id.btnDisc);
         btnScan = (Button) findViewById(R.id.btnScan);
@@ -133,6 +129,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     @Override
     public void onChannelDisconnected() {
         //@TODO
+        tfConStatus.setText("Not Connected on Channel");
     }
 
     @Override
@@ -141,27 +138,34 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     }
 
     @Override
-    public void connect(WifiP2pConfig wifiP2pConfig) {
-        if(device != null) {
-            manager.connect(channel, wifiP2pConfig, new WifiP2pManager.ActionListener() {
-                @Override
-                public void onSuccess() {
+    public void connect(final WifiP2pConfig wifiP2pConfig) {
+        manager.connect(channel, wifiP2pConfig, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                tfConStatus.setText("Trying to connect to: " + wifiP2pConfig.deviceAddress);
+            }
 
-                }
-
-                @Override
-                public void onFailure(int reason) {
-                    Toast.makeText(MainActivity.this, "Failed to Connect", Toast.LENGTH_LONG).show();
-                }
-            });
-        } else {
-            Log.v("SELECT", "Nothing Selected");
-        }
+            @Override
+            public void onFailure(int reason) {
+                Toast.makeText(MainActivity.this, "Failed to Connect", Toast.LENGTH_LONG).show();
+                tfConStatus.setText("Failed to connect to: " + wifiP2pConfig.deviceAddress);
+            }
+        });
     }
 
     @Override
     public void disconnect() {
+        manager.removeGroup(channel, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
 
+            }
+
+            @Override
+            public void onFailure(int reason) {
+
+            }
+        });
     }
 
     @Override
@@ -169,16 +173,38 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
         Log.v("peers", String.valueOf(peers.getDeviceList()));
         this.peers.clear();
         this.peers.addAll(peers.getDeviceList());
+        this.p2pDeviceList = peers;
         adapter.notifyDataSetChanged();
     }
 
     @Override
     public void onConnectionInfoAvailable(WifiP2pInfo info) {
-        Log.v("OWNER", String.valueOf(info.isGroupOwner));
-        if(info.groupFormed && !info.isGroupOwner) {
+        if (info.groupFormed && !info.isGroupOwner) {
+            tfConStatus.setText("Connected to: " + info.groupOwnerAddress);
             Log.v("info", "Connected");
-            Log.v("info", info.groupOwnerAddress.getHostAddress());
             new TransferData(info.groupOwnerAddress.getHostAddress(), 8288).execute();
+        }
+    }
+
+    /**
+     * Automated connect to simulate Hardware pairing.
+     *
+     * @param wifiP2pDeviceList
+     */
+    private void connectToAll(WifiP2pDeviceList wifiP2pDeviceList) {
+        if (p2pDeviceList == null) {
+            Toast.makeText(this, "No Devices to pair", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        List<WifiP2pDevice> allPeers = new ArrayList<>();
+        allPeers.addAll(wifiP2pDeviceList.getDeviceList());
+        if (allPeers.size() > 0) {
+            WifiP2pDevice device = allPeers.get(0);
+            WifiP2pConfig wifiP2pConfig = new WifiP2pConfig();
+            wifiP2pConfig.groupOwnerIntent = 0;                     //so client is not group owner
+            wifiP2pConfig.deviceAddress = device.deviceAddress;
+            wifiP2pConfig.wps.setup = WpsInfo.PBC;
+            connect(wifiP2pConfig);
         }
     }
 }

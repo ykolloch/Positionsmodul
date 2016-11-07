@@ -29,7 +29,6 @@ public class TransferData extends AsyncTask<Void, Void, String> {
 
     @Override
     protected String doInBackground(Void... params) {
-        Log.v("Client", "HELLO");
         Socket socket = null;
         try {
             Thread.sleep(5000);

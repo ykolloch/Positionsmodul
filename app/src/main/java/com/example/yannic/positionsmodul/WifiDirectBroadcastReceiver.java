@@ -35,20 +35,21 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
                 mainActivity.setWifiEnabled(false);
                 //@TODO reset date if needed?
             }
-            Log.d("Ka", "P2P state changed - " + state);
+            Log.v("Ka", "P2P state changed - " + state);
         } else if(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
             if(wifiP2pManager != null) {
                 wifiP2pManager.requestPeers(channel, mainActivity);
             }
-            Log.v("","Peers changed");
+            Log.v("Client","Peers changed");
         } else if(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             if (wifiP2pManager != null) {
                 NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
                 if (networkInfo.isConnected()) {
-                    Log.v("", "isConnected");
                     wifiP2pManager.requestConnectionInfo(channel, mainActivity);
                 } else {
                     //@TODO reset Date again?
+                    Log.v("Client", "Disco?");
+                    mainActivity.tfConStatus.setText("Not Connected");
                 }
             }
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
