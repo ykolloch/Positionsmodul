@@ -175,10 +175,10 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     @Override
     public void onConnectionInfoAvailable(WifiP2pInfo info) {
         Log.v("OWNER", String.valueOf(info.isGroupOwner));
-        if(info.groupFormed) {
+        if(info.groupFormed && !info.isGroupOwner) {
             Log.v("info", "Connected");
             Log.v("info", info.groupOwnerAddress.getHostAddress());
-            new TransferData(info.groupOwnerAddress.getHostAddress(), 8388).execute();
+            new TransferData(info.groupOwnerAddress.getHostAddress(), 8288).execute();
         }
     }
 }

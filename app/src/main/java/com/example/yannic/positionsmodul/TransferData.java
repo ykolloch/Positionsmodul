@@ -38,16 +38,18 @@ public class TransferData extends AsyncTask<Void, Void, String> {
             socket.connect(new InetSocketAddress(ip, port), 5000);
 
             DataOutputStream stream = new DataOutputStream(socket.getOutputStream());
-            stream.writeByte(1);
-            stream.writeUTF("foo bar");
-            stream.flush();
+            for (int i = 0; i < 20; i++) {
+                stream.writeByte(1);
+                stream.writeUTF("foo bar");
+                stream.flush();
+            }
             stream.write(-1);
             stream.close();
             socket.close();
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            if(socket != null) {
+            if (socket != null) {
                 try {
                     socket.close();
                     Log.v("Client", "Socket closed");
