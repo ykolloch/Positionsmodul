@@ -24,7 +24,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements WifiP2pManager.ChannelListener, DeviceActionListener, WifiP2pManager.PeerListListener, WifiP2pManager.ConnectionInfoListener {
 
-    Button btnScan, btnConnect, btnDisc;
+    Button btnConnect, btnDisc;
     TextView tfConStatus;
     ListView listViewDevices;
     private boolean isWifiEnabled = false;
@@ -32,10 +32,15 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     private WifiP2pManager manager;
     private WifiP2pManager.Channel channel;
     private BroadcastReceiver receiver = null;
+
+
     private List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
-    private WifiP2pDevice device;
     private ArrayAdapter<WifiP2pDevice> adapter;
     private WifiP2pDeviceList p2pDeviceList;
+    private ScanTask scanTask;
+    private List<WifiP2pDevice> flaggedDevices = new ArrayList<>();
+    private WifiP2pInfo wifiP2pInfo;
+    private WifiP2pConfig wifiP2pConfig;
 
 
     @Override
@@ -52,31 +57,26 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
 
-        btnScan.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (!isWifiEnabled()) {
-                    //@TODO
-                    return;
-                }
-                manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
-                    @Override
-                    public void onSuccess() {
-                        Toast.makeText(MainActivity.this, "Searching", Toast.LENGTH_LONG).show();
-                    }
+        flaggedDevices.clear();                                                                         //unnecessary i guess.
 
-                    @Override
-                    public void onFailure(int reason) {
-                        Toast.makeText(MainActivity.this, "Failed Searching", Toast.LENGTH_LONG).show();
-                    }
-                });
-            }
-        });
-
+        /**
+         * Starts the async to Scan for devices.
+         */
+        scanTask = new ScanTask(manager, channel, this);
+        scanTask.execute();                                                                             //maybe into constructor.
 
         btnConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (wifiP2pConfig != null && wifiP2pInfo != null && wifiP2pInfo.groupFormed) {
+                    for (int i = 0; i < peers.size(); i++) {
+                        if (wifiP2pConfig.deviceAddress.equals(peers.get(i).deviceAddress)) {
+                            flaggedDevices.add(peers.get(i));
+                            Log.v("Flagged", "Added " + peers.get(i).deviceAddress + " to flagged devices");
+                            disconnect();
+                        }
+                    }
+                }
                 connectToAll(p2pDeviceList);
             }
         });
@@ -110,7 +110,6 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
         tfConStatus = (TextView) findViewById(R.id.tfConStatus);
         btnConnect = (Button) findViewById(R.id.btnConnect);
         btnDisc = (Button) findViewById(R.id.btnDisc);
-        btnScan = (Button) findViewById(R.id.btnScan);
         listViewDevices = (ListView) findViewById(R.id.listViewDevices);
     }
 
@@ -130,6 +129,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     public void onChannelDisconnected() {
         //@TODO
         tfConStatus.setText("Not Connected on Channel");
+        resetData();
     }
 
     @Override
@@ -158,7 +158,9 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
         manager.removeGroup(channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
-
+                scanTask = new ScanTask(manager, channel, MainActivity.this);
+                scanTask.execute();
+                resetData();
             }
 
             @Override
@@ -180,6 +182,8 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     @Override
     public void onConnectionInfoAvailable(WifiP2pInfo info) {
         if (info.groupFormed && !info.isGroupOwner) {
+            this.wifiP2pInfo = info;
+            scanTask.cancel(true);
             tfConStatus.setText("Connected to: " + info.groupOwnerAddress);
             Log.v("info", "Connected");
             new TransferData(info.groupOwnerAddress.getHostAddress(), 8288).execute();
@@ -200,11 +204,22 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
         allPeers.addAll(wifiP2pDeviceList.getDeviceList());
         if (allPeers.size() > 0) {
             WifiP2pDevice device = allPeers.get(0);
-            WifiP2pConfig wifiP2pConfig = new WifiP2pConfig();
+            wifiP2pConfig = new WifiP2pConfig();
             wifiP2pConfig.groupOwnerIntent = 0;                     //so client is not group owner
             wifiP2pConfig.deviceAddress = device.deviceAddress;
             wifiP2pConfig.wps.setup = WpsInfo.PBC;
             connect(wifiP2pConfig);
         }
+        while(allPeers.size() > 0) {
+
+        }
+    }
+
+    /**
+     * reset if disconnected.
+     */
+    private void resetData() {
+        this.wifiP2pInfo = null;
+        this.wifiP2pConfig = null;
     }
 }
