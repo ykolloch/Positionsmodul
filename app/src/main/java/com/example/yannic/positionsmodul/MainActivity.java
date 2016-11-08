@@ -43,9 +43,9 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     private ScanTask scanTask;
 
 
-    private List<WifiP2pDevice> flaggedDevices = new ArrayList<>();
+    private List<String> flaggedDeviceAddresses = new ArrayList<>();
 
-    
+
     private WifiP2pInfo wifiP2pInfo;
     private WifiP2pConfig wifiP2pConfig;
 
@@ -66,21 +66,22 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
 
-        flaggedDevices.clear();                                                                         //unnecessary i guess.
+        flaggedDeviceAddresses.clear();                                                                         //unnecessary i guess.
 
         /**
          * Starts the async to Scan for devices.
          */
         scanTask = new ScanTask(manager, channel, this);
-        scanTask.execute();                                                                             //maybe into constructor.
+        scanTask.execute();
 
         btnConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (wifiP2pConfig != null && wifiP2pInfo != null && wifiP2pInfo.groupFormed) {
+                    //@TODO unnecessary just flag current connection address!
                     for (int i = 0; i < peers.size(); i++) {
                         if (wifiP2pConfig.deviceAddress.equals(peers.get(i).deviceAddress)) {
-                            flaggedDevices.add(peers.get(i));
+                            flaggedDeviceAddresses.add(peers.get(i).deviceAddress);
                             Log.v("Flagged", "Added " + peers.get(i).deviceAddress + " to flagged devices");
                             disconnect();
                         }
@@ -136,14 +137,14 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
 
     @Override
     public void onChannelDisconnected() {
-        //@TODO
+        //@TODO when called?
         tfConStatus.setText("Not Connected on Channel");
         resetData();
     }
 
     @Override
     public void showDetails(WifiP2pDevice wifiP2pDevice) {
-        //@TODO
+        //@TODO not needed right now!
     }
 
     @Override
@@ -260,7 +261,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     private WifiP2pDevice getNonFlaggedDevice(List<WifiP2pDevice> devices) {
         for (int i = 0; i < devices.size(); i++) {
             WifiP2pDevice wifiP2pDevice = devices.get(i);
-            if (!flaggedDevices.contains(wifiP2pDevice)) {
+            if (!flaggedDeviceAddresses.contains(wifiP2pDevice.deviceAddress)) {
                 Log.v(LOG_TAG, "Found a non flagged device to connect");
                 return wifiP2pDevice;
             }
