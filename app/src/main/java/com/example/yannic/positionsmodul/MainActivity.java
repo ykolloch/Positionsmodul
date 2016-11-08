@@ -9,6 +9,8 @@ import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -32,15 +34,22 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     private WifiP2pManager manager;
     private WifiP2pManager.Channel channel;
     private BroadcastReceiver receiver = null;
+    private final static String LOG_TAG = "MainActivity";
 
 
     private List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
     private ArrayAdapter<WifiP2pDevice> adapter;
     private WifiP2pDeviceList p2pDeviceList;
     private ScanTask scanTask;
+
+
     private List<WifiP2pDevice> flaggedDevices = new ArrayList<>();
+
+    
     private WifiP2pInfo wifiP2pInfo;
     private WifiP2pConfig wifiP2pConfig;
+
+    private ConnectionTimeout timeout;
 
 
     @Override
@@ -143,12 +152,38 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
             @Override
             public void onSuccess() {
                 tfConStatus.setText("Trying to connect to: " + wifiP2pConfig.deviceAddress);
+                //@TODO start timeout check!
+                startTimeoutThread();
             }
 
             @Override
             public void onFailure(int reason) {
                 Toast.makeText(MainActivity.this, "Failed to Connect", Toast.LENGTH_LONG).show();
                 tfConStatus.setText("Failed to connect to: " + wifiP2pConfig.deviceAddress);
+            }
+        });
+    }
+
+    private void startTimeoutThread() {
+        timeout = new ConnectionTimeout(MainActivity.this);
+        if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.HONEYCOMB)
+            timeout.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        else
+            timeout.execute();
+    }
+
+    @Override
+    public void cancelInvite() {
+        manager.cancelConnect(channel, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Log.v(LOG_TAG, "Canceling connection after timeout");
+                //@TODO flag device
+            }
+
+            @Override
+            public void onFailure(int reason) {
+
             }
         });
     }
@@ -183,10 +218,15 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     public void onConnectionInfoAvailable(WifiP2pInfo info) {
         if (info.groupFormed && !info.isGroupOwner) {
             this.wifiP2pInfo = info;
-            scanTask.cancel(true);
+
+            scanTask.cancel(true);  //@TODO cancel
+            if(timeout != null)
+                timeout.setConnection(true);
+
             tfConStatus.setText("Connected to: " + info.groupOwnerAddress);
             Log.v("info", "Connected");
-            new TransferData(info.groupOwnerAddress.getHostAddress(), 8288).execute();
+            //@TODO Transfer Data disabled atm.
+            //new TransferData(info.groupOwnerAddress.getHostAddress(), 8288).execute();
         }
     }
 
@@ -203,16 +243,30 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
         List<WifiP2pDevice> allPeers = new ArrayList<>();
         allPeers.addAll(wifiP2pDeviceList.getDeviceList());
         if (allPeers.size() > 0) {
-            WifiP2pDevice device = allPeers.get(0);
+            WifiP2pDevice device = getNonFlaggedDevice(allPeers);
             wifiP2pConfig = new WifiP2pConfig();
             wifiP2pConfig.groupOwnerIntent = 0;                     //so client is not group owner
             wifiP2pConfig.deviceAddress = device.deviceAddress;
             wifiP2pConfig.wps.setup = WpsInfo.PBC;
             connect(wifiP2pConfig);
         }
-        while(allPeers.size() > 0) {
+    }
 
+    /**
+     *  Returns a Device that has not been flagged from the list of found peers.
+     * @param devices
+     * @return null or a found device.
+     */
+    private WifiP2pDevice getNonFlaggedDevice(List<WifiP2pDevice> devices) {
+        for (int i = 0; i < devices.size(); i++) {
+            WifiP2pDevice wifiP2pDevice = devices.get(i);
+            if (!flaggedDevices.contains(wifiP2pDevice)) {
+                Log.v(LOG_TAG, "Found a non flagged device to connect");
+                return wifiP2pDevice;
+            }
         }
+        Log.v(LOG_TAG, "No none flagged device to connect");
+        return null;
     }
 
     /**

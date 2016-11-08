@@ -12,4 +12,5 @@ public interface DeviceActionListener {
     void showDetails(WifiP2pDevice wifiP2pDevice);
     void connect(WifiP2pConfig wifiP2pConfig);
     void disconnect();
+    void cancelInvite();
 }
