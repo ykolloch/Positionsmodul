@@ -1,8 +1,10 @@
 package com.example.yannic.positionsmodul;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -12,6 +14,8 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -51,12 +55,17 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
 
     private ConnectionTimeout timeout;
 
+    private static final String[] GPS_PERMS = {Manifest.permission.ACCESS_FINE_LOCATION};
+    private static final int PERM_CODE = 1337;
 
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         this.findAllbyID();
+        requestPermissions(GPS_PERMS, PERM_CODE);
 
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
@@ -167,7 +176,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
 
     private void startTimeoutThread() {
         timeout = new ConnectionTimeout(MainActivity.this);
-        if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.HONEYCOMB)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
             timeout.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         else
             timeout.execute();
@@ -221,13 +230,13 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
             this.wifiP2pInfo = info;
 
             scanTask.cancel(true);  //@TODO cancel
-            if(timeout != null)
+            if (timeout != null)
                 timeout.setConnection(true);
 
             tfConStatus.setText("Connected to: " + info.groupOwnerAddress);
             Log.v("info", "Connected");
             //@TODO Transfer Data disabled atm.
-            //new TransferData(info.groupOwnerAddress.getHostAddress(), 8288).execute();
+            new TransferData(info.groupOwnerAddress.getHostAddress(), 8288).execute();
         }
     }
 
@@ -254,7 +263,8 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     }
 
     /**
-     *  Returns a Device that has not been flagged from the list of found peers.
+     * Returns a Device that has not been flagged from the list of found peers.
+     *
      * @param devices
      * @return null or a found device.
      */
@@ -276,5 +286,23 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     private void resetData() {
         this.wifiP2pInfo = null;
         this.wifiP2pConfig = null;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case PERM_CODE:
+                if(canAccessLocation())
+                    new GPS(this, this);
+                break;
+            default:
+                break;
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private boolean canAccessLocation() {
+        return PackageManager.PERMISSION_GRANTED == checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION);
     }
 }
