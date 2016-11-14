@@ -21,10 +21,12 @@ public class TransferData extends AsyncTask<Void, Void, String> {
 
     private String ip;
     private int port;
+    private GPS gps;
 
     public TransferData(String ip, int port) {
         this.ip = ip;
         this.port = port;
+        gps = GPS.getReference();
     }
 
     @Override
@@ -39,8 +41,9 @@ public class TransferData extends AsyncTask<Void, Void, String> {
             DataOutputStream stream = new DataOutputStream(socket.getOutputStream());
             for (int i = 0; i < 20; i++) {
                 stream.writeByte(1);
-                stream.writeUTF("foo bar");
+                stream.writeUTF(gps.getNMEA());
                 stream.flush();
+                Thread.sleep(1000);
             }
             stream.write(-1);
             stream.close();
