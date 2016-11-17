@@ -79,9 +79,10 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
 
         /**
          * Starts the async to Scan for devices.
-         */
+         * now used from WifiDirectBroadcastReceiver
         scanTask = new ScanTask(manager, channel, this);
         scanTask.execute();
+         */
 
         btnConnect.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -100,7 +101,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
             }
         });
 
-        adapter = new ArrayAdapter<WifiP2pDevice>(this, android.R.layout.simple_list_item_1, android.R.id.text1, peers);
+        //adapter = new ArrayAdapter<WifiP2pDevice>(this, android.R.layout.simple_list_item_1, android.R.id.text1, peers);
         adapter = new CustomAdapter(this, peers);
         listViewDevices.setAdapter(adapter);
 
@@ -205,8 +206,6 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
         manager.removeGroup(channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
-                scanTask = new ScanTask(manager, channel, MainActivity.this);
-                scanTask.execute();
                 resetData();
             }
 
@@ -306,5 +305,14 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     @RequiresApi(api = Build.VERSION_CODES.M)
     private boolean canAccessLocation() {
         return PackageManager.PERMISSION_GRANTED == checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION);
+    }
+
+    /**
+     * Starts the SearchTask
+     * used from WifiDirectBroadcastReciever
+     */
+    public void startSearchTask() {
+        scanTask = new ScanTask(manager, channel, MainActivity.this);
+        scanTask.execute();
     }
 }

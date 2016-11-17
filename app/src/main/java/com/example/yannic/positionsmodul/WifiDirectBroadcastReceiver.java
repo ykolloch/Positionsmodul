@@ -47,7 +47,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
                 if (networkInfo.isConnected()) {
                     wifiP2pManager.requestConnectionInfo(channel, mainActivity);
                 } else {
-                    //@TODO reset Date again?
+                    mainActivity.startSearchTask();
                     Log.v("Client", "Disco?");
                     mainActivity.tfConStatus.setText("Not Connected");
                 }
