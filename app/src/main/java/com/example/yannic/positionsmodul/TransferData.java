@@ -22,6 +22,8 @@ public class TransferData extends AsyncTask<Void, Void, String> {
     private String ip;
     private int port;
     private GPS gps;
+    private static Boolean done = false;
+    private final String LOG_TAG = String.valueOf(this.getClass());
 
     public TransferData(String ip, int port) {
         this.ip = ip;
@@ -39,7 +41,8 @@ public class TransferData extends AsyncTask<Void, Void, String> {
             socket.connect(new InetSocketAddress(ip, port), 5000);
 
             DataOutputStream stream = new DataOutputStream(socket.getOutputStream());
-            for (int i = 0; i < 20; i++) {
+            while (!done) {
+                Log.v(LOG_TAG, "Send NMEA");
                 stream.writeByte(1);
                 stream.writeUTF(gps.getNMEA());
                 stream.flush();
@@ -54,12 +57,16 @@ public class TransferData extends AsyncTask<Void, Void, String> {
             if (socket != null) {
                 try {
                     socket.close();
-                    Log.v("Client", "Socket closed");
+                    Log.v(LOG_TAG, "Socket closed");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }
         return null;
+    }
+
+    public static void setDone(Boolean bDone) {
+        done = bDone;
     }
 }

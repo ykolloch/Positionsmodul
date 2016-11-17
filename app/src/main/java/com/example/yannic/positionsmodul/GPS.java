@@ -88,13 +88,14 @@ public class GPS {
         String checksum = "*4F";
 
         String separator = ",";
-        nmea_string =  message_typ + separator + UTC + separator + latitude + separator +
+        nmea_string = message_typ + separator + UTC + separator + latitude + separator +
                 latitude_direction + separator + longitude + separator + longitude_direction + separator
-                + GPS_Quali + separator + number_sat + hdop + separator + height + separator + height_metric + separator + checksum;
+                + GPS_Quali + separator + number_sat + separator + hdop + separator + height + separator + height_metric + separator + checksum;
     }
 
     /**
      * NMEA format coordinates.
+     *
      * @param v
      * @return
      */
@@ -112,7 +113,7 @@ public class GPS {
 
         @Override
         public void onLocationChanged(Location location) {
-            Log.v("Location", location.toString());
+            //Log.v("Location", location.toString());
             setLocation(location);
             createNMEAString(location);
         }

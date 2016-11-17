@@ -162,6 +162,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
             @Override
             public void onSuccess() {
                 tfConStatus.setText("Trying to connect to: " + wifiP2pConfig.deviceAddress);
+                TransferData.setDone(false);
                 //@TODO start timeout check!
                 startTimeoutThread();
             }
@@ -200,6 +201,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
 
     @Override
     public void disconnect() {
+        TransferData.setDone(true);
         manager.removeGroup(channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
