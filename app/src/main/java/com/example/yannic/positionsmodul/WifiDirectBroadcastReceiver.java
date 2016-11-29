@@ -16,6 +16,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
     private WifiP2pManager wifiP2pManager;
     private WifiP2pManager.Channel channel;
     private MainActivity mainActivity;
+    private final String LOG_TAG = String.valueOf(this.getClass());
 
     public WifiDirectBroadcastReceiver(WifiP2pManager manager, WifiP2pManager.Channel channel, MainActivity mainActivity) {
         super();
@@ -35,12 +36,12 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
                 mainActivity.setWifiEnabled(false);
                 //@TODO reset date if needed?
             }
-            Log.v("Ka", "P2P state changed - " + state);
+            Log.v(LOG_TAG, "P2P state changed - " + state);
         } else if(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
             if(wifiP2pManager != null) {
                 wifiP2pManager.requestPeers(channel, mainActivity);
             }
-            Log.v("Client","Peers changed");
+            Log.v(LOG_TAG,"Peers List changed");
         } else if(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             if (wifiP2pManager != null) {
                 NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
@@ -48,7 +49,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
                     wifiP2pManager.requestConnectionInfo(channel, mainActivity);
                 } else {
                     mainActivity.startSearchTask();
-                    Log.v("Client", "Disco?");
+                    Log.v(LOG_TAG, "No Connection");
                     mainActivity.tfConStatus.setText("Not Connected");
                 }
             }

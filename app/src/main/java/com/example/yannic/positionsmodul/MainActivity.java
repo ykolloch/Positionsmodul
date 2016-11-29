@@ -50,6 +50,9 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
     private List<String> flaggedDeviceAddresses = new ArrayList<>();
 
 
+    /**
+     * important to call resetData();
+     */
     private WifiP2pInfo wifiP2pInfo;
     private WifiP2pConfig wifiP2pConfig;
 
@@ -77,12 +80,6 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
 
         flaggedDeviceAddresses.clear();                                                                         //unnecessary i guess.
 
-        /**
-         * Starts the async to Scan for devices.
-         * now used from WifiDirectBroadcastReceiver
-        scanTask = new ScanTask(manager, channel, this);
-        scanTask.execute();
-         */
 
         btnConnect.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -101,7 +98,6 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
             }
         });
 
-        //adapter = new ArrayAdapter<WifiP2pDevice>(this, android.R.layout.simple_list_item_1, android.R.id.text1, peers);
         adapter = new CustomAdapter(this, peers);
         listViewDevices.setAdapter(adapter);
 
@@ -190,7 +186,11 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
             @Override
             public void onSuccess() {
                 Log.v(LOG_TAG, "Canceling connection after timeout");
-                //@TODO flag device
+                if (wifiP2pConfig != null) {
+                    flaggedDeviceAddresses.add(wifiP2pConfig.deviceAddress);
+                    Log.v(LOG_TAG, "Flagged Device: " +wifiP2pConfig.deviceAddress + " for Timeout");
+                }
+                resetData();
             }
 
             @Override
@@ -218,7 +218,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
 
     @Override
     public void onPeersAvailable(WifiP2pDeviceList peers) {
-        Log.v("peers", String.valueOf(peers.getDeviceList()));
+        //Log.v("peers", String.valueOf(peers.getDeviceList()));
         this.peers.clear();
         this.peers.addAll(peers.getDeviceList());
         this.p2pDeviceList = peers;
@@ -230,13 +230,12 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
         if (info.groupFormed && !info.isGroupOwner) {
             this.wifiP2pInfo = info;
 
-            scanTask.cancel(true);  //@TODO cancel
+            scanTask.cancel(true);  //@TODO improve
             if (timeout != null)
                 timeout.setConnection(true);
 
             tfConStatus.setText("Connected to: " + info.groupOwnerAddress);
             Log.v("info", "Connected");
-            //@TODO Transfer Data disabled atm.
             new TransferData(info.groupOwnerAddress.getHostAddress(), 8288).execute();
         }
     }
@@ -309,7 +308,7 @@ public class MainActivity extends AppCompatActivity implements WifiP2pManager.Ch
 
     /**
      * Starts the SearchTask
-     * used from WifiDirectBroadcastReciever
+     * used from WifiDirectBroadcastReceiver
      */
     public void startSearchTask() {
         scanTask = new ScanTask(manager, channel, MainActivity.this);
