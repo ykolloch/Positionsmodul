@@ -42,6 +42,7 @@ public class TransferData extends AsyncTask<Void, Void, String> {
 
             DataOutputStream stream = new DataOutputStream(socket.getOutputStream());
             while (!done) {
+                while()
                 Log.v(LOG_TAG, "Send NMEA");
                 stream.writeByte(1);
                 stream.writeUTF(gps.getNMEA());
